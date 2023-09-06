@@ -2,14 +2,13 @@ package com.example.gitlister;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import org.json.*;
+
 
 @SpringBootApplication
 public class GitListerApplication {
@@ -20,13 +19,22 @@ public class GitListerApplication {
 
 @RestController
 class GitListerController{
+    private static final String auth = "";
+
+    @GetMapping("/")
+    public String getDefault() {
+        return "Hello";
+    }
+
     @GetMapping(value = "/{name}")
-    public String getUser(@RequestHeader Map<String, String> header, @PathVariable("name") String name){
-        header.put("Authorization", "Bearer ");
+    public String getUser(@PathVariable("name") String name){
+        HttpHeaders header = new HttpHeaders();
+        header.set("Authorization", auth);
+        HttpEntity<Void> he = new HttpEntity<>(header);
         final String uri = "https://api.github.com/users/"+name+"/repos";
         RestTemplate rt = new RestTemplate();
-        String result_str = rt.getForObject(uri, String.class);
-        JSONArray result = new JSONArray(result_str);
+        ResponseEntity<String> result_str = rt.exchange(uri, HttpMethod.GET, he, String.class);
+        JSONArray result = new JSONArray(result_str.getBody());
         System.out.println("OK");
         if (result.isEmpty())
         {
@@ -37,7 +45,7 @@ class GitListerController{
                     }""";
         }
 
-        var repositories = parseUser(header, result, rt);
+        var repositories = parseUser(result, rt);
         return buildAnswer(repositories).toString();
     }
 
@@ -63,7 +71,7 @@ class GitListerController{
             for(int i = 0; i < repo.branches.size(); i++){
                 var br = repo.branches.get(i);
                 if(!inner_first){
-                    ans.append(",");
+                    ans.append(",\n");
                 }
                 inner_first = false;
                 ans.append("{\n\"name\": ");
@@ -71,7 +79,7 @@ class GitListerController{
                 ans.append(",\n");
                 ans.append("\"sha\": ");
                 ans.append(br.SHA);
-                ans.append("}\n");
+                ans.append("}");
             }
             ans.append("]\n}");
         }
@@ -79,13 +87,8 @@ class GitListerController{
         System.out.println(ans);
         return new JSONArray(ans.toString());
     }
+    public List<Repo> parseUser(JSONArray data, RestTemplate rt){
 
-    @GetMapping(value = "/")
-    public String getDefault(){
-        return "To run analysis, put username in the search bar";
-    }
-    public List<Repo> parseUser(@RequestHeader Map<String, String> header, JSONArray data, RestTemplate rt){
-        header.put("Authorization", "Bearer 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");
         List<Repo> output = new ArrayList<>();
         for (int i = 0; i < data.length(); i++) {
             JSONObject entry = data.getJSONObject(i);
@@ -95,9 +98,12 @@ class GitListerController{
                 String user = entry.getJSONObject("owner").getString("login");
                 Repo repository = new Repo(name, user);
                 System.out.println(name);
+                HttpHeaders header = new HttpHeaders();
+                header.set("Authorization", auth);
+                HttpEntity<Void> he = new HttpEntity<>(header);
                 String uri = "https://api.github.com/repos/"+user+"/"+name+"/branches";
-                String result_str = rt.getForObject(uri, String.class);
-                JSONArray branches_arr = new JSONArray(result_str);
+                ResponseEntity<String> result_str = rt.exchange(uri, HttpMethod.GET, he, String.class);
+                JSONArray branches_arr = new JSONArray(result_str.getBody());
                 for(int j = 0; j < branches_arr.length(); j++){
                     JSONObject branch = branches_arr.getJSONObject(j);
                     String branch_name = branch.getString("name");
