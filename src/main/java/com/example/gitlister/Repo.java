@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Repo {
-    String name;
-    String login;
-    List<Branch> branches;
+    private String name;
+    private String login;
+    private List<Branch> branches;
 
     public Repo(String name, String login) {
         this.name = name;

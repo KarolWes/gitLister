@@ -1,8 +1,8 @@
 package com.example.gitlister;
 
 public class Branch {
-    String name;
-    String SHA;
+    private String name;
+    private String SHA;
 
     public Branch(String name, String SHA) {
         this.name = name;

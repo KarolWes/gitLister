@@ -19,7 +19,7 @@ public class GitListerApplication {
 
 @RestController
 class GitListerController{
-    private static final String auth = "";
+    private static final String auth = "Bearer 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";
 
     @GetMapping("/")
     public String getDefault() {
@@ -27,65 +27,53 @@ class GitListerController{
     }
 
     @GetMapping(value = "/{name}")
-    public String getUser(@PathVariable("name") String name){
+    public Object getUser(@PathVariable("name") String name){
         HttpHeaders header = new HttpHeaders();
         header.set("Authorization", auth);
         HttpEntity<Void> he = new HttpEntity<>(header);
         final String uri = "https://api.github.com/users/"+name+"/repos";
         RestTemplate rt = new RestTemplate();
         ResponseEntity<String> result_str = rt.exchange(uri, HttpMethod.GET, he, String.class);
+        if(result_str.getHeaders().getContentType() == MediaType.APPLICATION_XML){
+            JSONObject ans_obj = new JSONObject();
+            ans_obj.put("status", 406);
+            ans_obj.put("message", "Wrong header type");
+            JSONArray ans = new JSONArray();
+            ans.put(ans_obj);
+            return ans.toString();
+        }
         JSONArray result = new JSONArray(result_str.getBody());
         System.out.println("OK");
         if (result.isEmpty())
         {
-            return """
-                    {
-                        “status”: 404
-                        “Message”: Requested user does not exist
-                    }""";
+            JSONObject ans_obj = new JSONObject();
+            ans_obj.put("status", 404);
+            ans_obj.put("message", "Requested user does not exist");
+            JSONArray ans = new JSONArray();
+            ans.put(ans_obj);
+            return ans.toString();
         }
-
-        var repositories = parseUser(result, rt);
-        return buildAnswer(repositories).toString();
+        var ans = buildAnswer(parseUser(result, rt));
+        return ans.toString();
     }
 
     private JSONArray buildAnswer(List<Repo> repositories) {
-        StringBuilder ans = new StringBuilder();
-        boolean first = true;
-        ans.append("[\n");
-        for(var repo: repositories){
-            if (!first){
-                ans.append(",\n");
-
+        JSONArray ans = new JSONArray();
+        for(var repo: repositories) {
+            JSONObject r = new JSONObject();
+            r.put("name", repo.getName());
+            r.put("user", repo.getLogin());
+            JSONArray branches = new JSONArray();
+            for(var branch: repo.getBranches()) {
+                JSONObject b = new JSONObject();
+                b.put("name", branch.getName());
+                b.put("sha", branch.getSHA());
+                branches.put(b);
             }
-            first = false;
-            ans.append("{\n");
-            ans.append("\"name\": ");
-            ans.append(repo.name);
-            ans.append(",\n");
-            ans.append("\"user\": ");
-            ans.append(repo.login);
-            ans.append(",\n");
-            ans.append("\"branches\": [\n");
-            boolean inner_first = true;
-            for(int i = 0; i < repo.branches.size(); i++){
-                var br = repo.branches.get(i);
-                if(!inner_first){
-                    ans.append(",\n");
-                }
-                inner_first = false;
-                ans.append("{\n\"name\": ");
-                ans.append(br.name);
-                ans.append(",\n");
-                ans.append("\"sha\": ");
-                ans.append(br.SHA);
-                ans.append("}");
-            }
-            ans.append("]\n}");
+            r.put("branches", branches);
+            ans.put(r);
         }
-        ans.append("\n]");
-        System.out.println(ans);
-        return new JSONArray(ans.toString());
+        return ans;
     }
     public List<Repo> parseUser(JSONArray data, RestTemplate rt){
 
@@ -109,7 +97,7 @@ class GitListerController{
                     String branch_name = branch.getString("name");
                     String SHA = branch.getJSONObject("commit").getString("sha");
                     Branch br = new Branch(branch_name, SHA);
-                    repository.branches.add(br);
+                    repository.getBranches().add(br);
                 }
                 output.add(repository);
             }
