@@ -85,7 +85,7 @@ class GitListerController{
         return "To run analysis, put username in the search bar";
     }
     public List<Repo> parseUser(@RequestHeader Map<String, String> header, JSONArray data, RestTemplate rt){
-        header.put("Authorization", "Bearer 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");
+        header.put("Authorization", "Bearer");
         List<Repo> output = new ArrayList<>();
         for (int i = 0; i < data.length(); i++) {
             JSONObject entry = data.getJSONObject(i);
