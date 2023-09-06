@@ -29,8 +29,9 @@ Both inner classes features full getter and setter functionality.
 
 ## Requirements
 * Coded using Java 17 on Amazon Coretto
-* Spring Boot web in version 5
+* Spring Boot web in version 3
 * Additional dependencies: json from org.json, version 20230618
+* Dependencies handling using Gradle 
 * Coded on Jetbrains IntelliJ IDEA Ultimate 2023.2.1
 * Under Windows 10
 * Run on Xampp Tomcat
